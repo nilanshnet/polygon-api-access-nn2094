@@ -12,7 +12,7 @@ from math import isnan
 
 class Data_Aggregate():
 
-    def __init__(self, location = os.getcwd(), table_name = "database"):
+    def __init__(self, location, table_name):
         
         # Enter location to store the db file
         self.db_location = location
