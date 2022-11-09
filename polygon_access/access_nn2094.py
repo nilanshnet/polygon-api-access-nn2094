@@ -25,10 +25,19 @@ class Data_Aggregate():
 
     # Function slightly modified from polygon sample code to format the date string
     def ts_to_datetime(self, ts) -> str:
+        '''
+        Function slightly modified from polygon sample code to format the date string
+        
+        '''
         return datetime.datetime.fromtimestamp(ts / 1000.0).strftime('%Y-%m-%d %H:%M:%S')
 
     # Function which clears the raw data tables once we have aggregated the data in a 6 minute interval
     def reset_raw_data_tables(self, engine, currency_pairs):
+        '''
+        
+        Function which clears the raw data tables once we have aggregated the data in a 6 minute interval
+        
+        '''
         with engine.begin() as conn:
             for curr in currency_pairs:
                 conn.execute(text("DROP TABLE " + curr[0] + curr[1] + "_raw;"))
@@ -38,6 +47,11 @@ class Data_Aggregate():
 
     # This creates a table for storing the raw, unaggregated price data for each currency pair in the SQLite database
     def initialize_raw_data_tables(self, engine, currency_pairs):
+        '''
+        
+        This creates a table for storing the raw, unaggregated price data for each currency pair in the SQLite database
+        
+        '''
         with engine.begin() as conn:
             for curr in currency_pairs:
                 conn.execute(
@@ -46,6 +60,11 @@ class Data_Aggregate():
 
     # This creates a table for storing the (6 min interval) aggregated price data for each currency pair in the SQLite database
     def initialize_aggregated_tables(self,engine,currency_pairs):
+        '''
+        
+        This creates a table for storing the (6 min interval) aggregated price data for each currency pair in the SQLite database
+        
+        '''
         with engine.begin() as conn:
             for curr in currency_pairs:
                 conn.execute(text(
@@ -55,6 +74,11 @@ class Data_Aggregate():
     # This function is called every 6 minutes to aggregate the data, store it in the aggregate table,
     # and then delete the raw data
     def aggregate_raw_data_tables(self, engine, currency_pairs):
+        '''
+        
+        This function is called every 6 minutes to aggregate the data, store it in the aggregate table, and then delete the raw data
+        
+        '''
         with engine.begin() as conn:
             for curr in currency_pairs:
                 result = conn.execute(
@@ -150,7 +174,12 @@ class Data_Aggregate():
                     pass
 
     def acquire_data_and_write(self, currency_pairs):
-
+        '''
+        
+        This access function repeatedly calls the polygon api every 1 seconds for 24 hours 
+        and stores the results.
+        
+        '''
         # Number of list iterations - each one should last about 1 second
         count = 0
         agg_count = 0
