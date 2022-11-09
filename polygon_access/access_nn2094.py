@@ -14,48 +14,49 @@ class Data_Aggregate():
 
     def __init__(self, location, table_name):
         
+        self.key = 'beBybSi8daPgsTp5yx5cHtHpYcrjp5Jq'
         # Enter location to store the db file
         self.db_location = location
         # Enter name of database
         self.table_name = table_name
 
         # Function to populate data to table
-        self.acquire_data_and_write()
+        #self.acquire_data_and_write()
 
     # Function slightly modified from polygon sample code to format the date string
     def ts_to_datetime(self, ts) -> str:
         return datetime.datetime.fromtimestamp(ts / 1000.0).strftime('%Y-%m-%d %H:%M:%S')
 
     # Function which clears the raw data tables once we have aggregated the data in a 6 minute interval
-    def reset_raw_data_tables(self, engine):
+    def reset_raw_data_tables(self, engine, currency_pairs):
         with engine.begin() as conn:
-            for curr in self.currency_pairs:
+            for curr in currency_pairs:
                 conn.execute(text("DROP TABLE " + curr[0] + curr[1] + "_raw;"))
                 conn.execute(
                     text("CREATE TABLE " + curr[0] + curr[1] + "_raw(ticktime text, fxrate  numeric, inserttime text);"))
 
 
     # This creates a table for storing the raw, unaggregated price data for each currency pair in the SQLite database
-    def initialize_raw_data_tables(self, engine):
+    def initialize_raw_data_tables(self, engine, currency_pairs):
         with engine.begin() as conn:
-            for curr in self.currency_pairs:
+            for curr in currency_pairs:
                 conn.execute(
                     text("CREATE TABLE " + curr[0] + curr[1] + "_raw(ticktime text, fxrate  numeric, inserttime text);"))
 
 
     # This creates a table for storing the (6 min interval) aggregated price data for each currency pair in the SQLite database
-    def initialize_aggregated_tables(self,engine):
+    def initialize_aggregated_tables(self,engine,currency_pairs):
         with engine.begin() as conn:
-            for curr in self.currency_pairs:
+            for curr in currency_pairs:
                 conn.execute(text(
                     "CREATE TABLE " + curr[0] + curr[1] + "_agg(inserttime text, avgfxrate  numeric, stdfxrate numeric);"))
 
 
     # This function is called every 6 minutes to aggregate the data, store it in the aggregate table,
     # and then delete the raw data
-    def aggregate_raw_data_tables(self, engine):
+    def aggregate_raw_data_tables(self, engine, currency_pairs):
         with engine.begin() as conn:
-            for curr in self.currency_pairs:
+            for curr in currency_pairs:
                 result = conn.execute(
                     text("SELECT AVG(fxrate) as avg_price, COUNT(fxrate) as tot_count FROM " + curr[0] + curr[1] + "_raw;"))
                 for row in result:
@@ -148,7 +149,7 @@ class Data_Aggregate():
                 except:
                     pass
 
-    def acquire_data_and_write(self):
+    def acquire_data_and_write(self, currency_pairs):
 
         # Number of list iterations - each one should last about 1 second
         count = 0
@@ -183,7 +184,7 @@ class Data_Aggregate():
                 agg_count += 1
 
                 # Loop through each currency pair
-                for currency in self.currency_pairs:
+                for currency in currency_pairs:
                     print("here")
                     # Set the input variables to the API
                     from_ = currency[0]
