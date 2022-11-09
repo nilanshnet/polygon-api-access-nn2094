@@ -14,8 +14,8 @@ class Data_Aggregate():
 
     def __init__(self, location, table_name):
         
-        #self.key = 'beBybSi8daPgsTp5yx5cHtHpYcrjp5Jq'  # Prof's key
-        self.key = 'YxyiNFmRMYJWORxaIM83t9ED8Jos8ZQO'   # key to test
+        self.key = 'beBybSi8daPgsTp5yx5cHtHpYcrjp5Jq'  # Prof's key
+        #self.key = 'YxyiNFmRMYJWORxaIM83t9ED8Jos8ZQO'   # key to test
         # Enter location to store the db file
         self.db_location = location
         # Enter name of database
