@@ -59,7 +59,7 @@ class Data_Aggregate():
 
 
     # This creates a table for storing the (6 min interval) aggregated price data for each currency pair in the SQLite database
-    def initialize_aggregated_tables(self,engine,currency_pairs):
+    def initialize_aggregated_tables(self, engine, currency_pairs):
         '''
         
         This creates a table for storing the (6 min interval) aggregated price data for each currency pair in the SQLite database
@@ -188,8 +188,8 @@ class Data_Aggregate():
         engine = create_engine("sqlite+pysqlite:///{}/{}.db".format(self.db_location, self.table_name), echo=False, future=True)
 
         # Create the needed tables in the database
-        self.initialize_raw_data_tables(engine)
-        self.initialize_aggregated_tables(engine)
+        self.initialize_raw_data_tables(engine, currency_pairs)
+        self.initialize_aggregated_tables(engine, currency_pairs)
 
         # Open a RESTClient for making the api calls
         with RESTClient(self.key) as client:
@@ -200,8 +200,8 @@ class Data_Aggregate():
                 # Make a check to see if 6 minutes has been reached or not
                 if agg_count == 360:
                     # Aggregate the data and clear the raw data tables
-                    self.aggregate_raw_data_tables(engine)
-                    self.reset_raw_data_tables(engine)
+                    self.aggregate_raw_data_tables(engine, currency_pairs)
+                    self.reset_raw_data_tables(engine, currency_pairs)
                     agg_count = 0
 
                 # Only call the api every 1 second, so wait here for 0.75 seconds, because the
