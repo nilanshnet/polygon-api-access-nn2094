@@ -31,8 +31,7 @@ class Data_Aggregate():
         
     # call the API
     def call_API(self, from_, to, amount, precision):
-        url = "https://api.polygon.io/v1/conversion/" + from_ + "/" + to + "?" + "amount=" + str(amount) + "&precision=" + str(precision) + "&apiKey=" + self.key
-        # url = f"https://api.polygon.io/v1/conversion/{from_}/{to}?amount={str(amount)}&precision={str(precision)}&apiKey={self.key}"
+        url = f"https://api.polygon.io/v1/conversion/{from_}/{to}?amount={str(amount)}&precision={str(precision)}&apiKey={self.key}"
         resp = requests.request("GET", url, headers={}, data={})
         if resp.status_code == 200:
             return resp.json()
@@ -260,7 +259,7 @@ class Data_Aggregate():
         #self.initialize_aggregated_tables(engine, currency_pairs)
 
         # Loop that runs until the total duration of the program hits 24 hours.
-        while count < 86400:  # 86400 seconds = 24 hours
+        while count < 36000:  # 36000 secs = 10 hours # 86400 seconds = 24 hours
 
             # Make a check to see if 6 minutes has been reached or not
             if agg_count == 360:
