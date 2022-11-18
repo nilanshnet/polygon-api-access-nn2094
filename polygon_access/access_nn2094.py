@@ -30,8 +30,8 @@ class Data_Aggregate():
         self.keltner_max_val = 0
         
     # call the API
-    def call_API(key, from_, to, amount, precision):
-        url = f"https://api.polygon.io/v1/conversion/{from_}/{to}?amount={str(amount)}&precision={str(precision)}&apiKey={key}"
+    def call_API(self, from_, to, amount, precision):
+        url = f"https://api.polygon.io/v1/conversion/{from_}/{to}?amount={str(amount)}&precision={str(precision)}&apiKey={self.key}"
         resp = requests.request("GET", url, headers={}, data={})
         if resp.status_code == 200:
             return resp.json()
