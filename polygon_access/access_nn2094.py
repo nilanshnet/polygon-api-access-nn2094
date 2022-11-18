@@ -288,14 +288,14 @@ class Data_Aggregate():
 
             # Loop through each currency pair
             for currency in currency_pairs:
-                print("here")
+                
                 # Set the input variables to the API
                 from_ = currency[0]
                 to = currency[1]
                 # Call the API with the required parameters
                 
                 response = self.call_API(from_, to, amount=100, precision=2) #client.forex_currencies_real_time_currency_conversion(from_, to, amount=100, precision=2)
-                if not response:
+                if response == None:
                     print("exception: response is NONE")
                     continue
 
