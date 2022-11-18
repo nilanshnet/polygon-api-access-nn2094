@@ -133,7 +133,7 @@ class Data_Aggregate():
                 for row in fd:
                     fd_val = row.tot_cnt
 
-                conn.execute(text("INSERT INTO "+curr[0]+curr[1]+"_raw2 (min, max, vol, mean, fd) VALUES (:min, :max, :vol, :mean, :fd);"),[{"min": min_rate, "max": max_rate, "vol": vol_val, "mean": avg_price, "fd": fd_val}])
+                conn.execute(text("INSERT INTO "+curr[0]+curr[1]+"_raw2 (min, max, vol, mean, fd) VALUES (:min, :max, :vol, :mean, :fd);"),[{"min": min_rate, "max": max_rate, "vol": vol, "mean": avg_price, "fd": fd_val}])
  
 
 
