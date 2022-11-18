@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import text
 from math import sqrt
 from math import isnan
+import requests
 
 
 
@@ -16,13 +17,27 @@ class Data_Aggregate():
         
         self.key = 'beBybSi8daPgsTp5yx5cHtHpYcrjp5Jq'  # Prof's key
         #self.key = 'YxyiNFmRMYJWORxaIM83t9ED8Jos8ZQO'   # key to test
+        
         # Enter location to store the db file
         self.db_location = location
         # Enter name of database
         self.table_name = table_name
 
-        # Function to populate data to table
-        #self.acquire_data_and_write()
+        # assignment - 2
+        self.EMA = 0
+        self.ATR = 0
+        self.keltner_min_val = 0
+        self.keltner_max_val = 0
+        
+    # call the API
+    def call_API(key, from_, to, amount, precision):
+        url = f"https://api.polygon.io/v1/conversion/{from_}/{to}?amount={str(amount)}&precision={str(precision)}&apiKey={key}"
+        resp = requests.request("GET", url, headers={}, data={})
+        if resp.status_code == 200:
+            return resp.json()
+        else:
+            return None
+
 
     # Function slightly modified from polygon sample code to format the date string
     def ts_to_datetime(self, ts) -> str:
@@ -45,7 +60,7 @@ class Data_Aggregate():
                 conn.execute(
                     text("CREATE TABLE " + curr[0] + curr[1] + "_raw(ticktime text, fxrate  numeric, inserttime text);"))
 
-
+    
     # This creates a table for storing the raw, unaggregated price data for each currency pair in the SQLite database
     def initialize_raw_data_tables(self, engine, currency_pairs):
         '''
@@ -58,6 +73,12 @@ class Data_Aggregate():
                 conn.execute(
                     text("CREATE TABLE " + curr[0] + curr[1] + "_raw(ticktime text, fxrate  numeric, inserttime text);"))
 
+    
+    def initialize_raw_data_tables_HW2(self, engine, currency_pairs):
+        with engine.begin() as conn:
+            for curr in currency_pairs:
+                conn.execute(text("CREATE TABLE "+curr[0]+curr[1]+"_raw2(min numeric, max  numeric, vol numeric, mean numeric, fd numeric);"))
+    
 
     # This creates a table for storing the (6 min interval) aggregated price data for each currency pair in the SQLite database
     def initialize_aggregated_tables(self, engine, currency_pairs):
@@ -70,16 +91,54 @@ class Data_Aggregate():
             for curr in currency_pairs:
                 conn.execute(text(
                     "CREATE TABLE " + curr[0] + curr[1] + "_agg(inserttime text, avgfxrate  numeric, stdfxrate numeric);"))
+    
 
 
     # This function is called every 6 minutes to aggregate the data, store it in the aggregate table,
     # and then delete the raw data
+    
     def aggregate_raw_data_tables(self, engine, currency_pairs):
         '''
         
         This function is called every 6 minutes to aggregate the data, store it in the aggregate table, and then delete the raw data
         
         '''
+        # Homeworkk - 2 keltner channel MAx, MIN, MAX-min and mean value calculate 
+        with engine.begin() as conn:
+            for curr in currency_pairs:
+                # mean value
+                avg = conn.execute(text("SELECT AVG(fxrate) AS avg_price FROM "+curr[0]+curr[1]+"_raw;"))
+                for row in avg:
+                    avg_price = row.avg_price
+                    self.EMA = avg_price
+                
+                # MIN
+                minimum = conn.execute(text("SELECT MIN(fxrate) AS min_rate FROM "+curr[0]+curr[1]+"_raw;"))
+                for row in minimum:
+                    min_rate = row.min_rate
+
+                # MAX
+                maxvalue = conn.execute(text("SELECT MAX(fxrate) AS max_rate FROM "+curr[0]+curr[1]+"_raw;"))
+                for row in maxvalue:
+                    max_rate = row.max_rate
+
+                # MAX-MIN as VOl
+                vol = conn.execute(text("SELECT MAX(fxrate)-MIN(fxrate) AS vol FROM "+curr[0]+curr[1]+"_raw;"))
+                for row in vol:
+                    vol = row.vol
+                    self.ATR = vol
+
+                # FD - fractal dimension
+                fd = conn.execute(text("SELECT COUNT(*) AS tot_cnt FROM "+curr[0]+curr[1]+"_raw WHERE fxrate < " + str(self.keltner_min_val) + " or fxrate > " + str(self.keltner_max_val) + ";"))
+                for row in fd:
+                    fd_val = row.tot_cnt
+
+                conn.execute(text("INSERT INTO "+curr[0]+curr[1]+"_raw2 (min, max, vol, mean, fd) VALUES (:min, :max, :vol, :mean, :fd);"),[{"min": min_rate, "max": max_rate, "vol": vol_val, "mean": avg_price, "fd": fd_val}])
+ 
+
+
+        # Homework - 1
+        """
         with engine.begin() as conn:
             for curr in currency_pairs:
                 result = conn.execute(
@@ -173,7 +232,8 @@ class Data_Aggregate():
                         curr[3].buy_curr(avg_price)
                 except:
                     pass
-
+            """
+    
     def acquire_data_and_write(self, currency_pairs):
         '''
         
@@ -190,59 +250,68 @@ class Data_Aggregate():
 
         # Create the needed tables in the database
         self.initialize_raw_data_tables(engine, currency_pairs)
-        self.initialize_aggregated_tables(engine, currency_pairs)
+        
+        # HW2 initialize data structures and DB table
+        self.initialize_raw_data_tables_HW2(engine, currency_pairs)
+        keltner_upper_band = []
+        keltner_lower_band = []
 
-        # Open a RESTClient for making the api calls
-        with RESTClient(self.key) as client:
-            # Loop that runs until the total duration of the program hits 24 hours.
-            while count < 86400:  # 86400 seconds = 24 hours
-                print(count)
+        #self.initialize_aggregated_tables(engine, currency_pairs)
 
-                # Make a check to see if 6 minutes has been reached or not
-                if agg_count == 360:
-                    # Aggregate the data and clear the raw data tables
-                    self.aggregate_raw_data_tables(engine, currency_pairs)
-                    self.reset_raw_data_tables(engine, currency_pairs)
-                    agg_count = 0
+        # Loop that runs until the total duration of the program hits 24 hours.
+        while count < 86400:  # 86400 seconds = 24 hours
 
-                # Only call the api every 1 second, so wait here for 0.75 seconds, because the
-                # code takes about .15 seconds to run
-                time.sleep(0.75)
+            # Make a check to see if 6 minutes has been reached or not
+            if agg_count == 360:
+                
+                # max and min according to the formula
+                self.keltner_max_val = self.EMA + count*0.025*self.ATR
+                self.keltner_min_val = self.EMA - count*0.025*self.ATR
 
-                # Increment the counters
-                count += 1
-                agg_count += 1
+                # add the min and max values to the array
+                keltner_upper_band.append(self.keltner_max_val)
+                keltner_lower_band.append(self.keltner_min_val)
 
-                # Loop through each currency pair
-                for currency in currency_pairs:
-                    print("here")
-                    # Set the input variables to the API
-                    from_ = currency[0]
-                    to = currency[1]
+                # Aggregate the data and clear the raw data tables
+                self.aggregate_raw_data_tables(engine, currency_pairs)
+                self.reset_raw_data_tables(engine, currency_pairs)
+                agg_count = 0
 
-                    # Call the API with the required parameters
-                    try:
-                        resp = client.forex_currencies_real_time_currency_conversion(from_, to, amount=100, precision=2)
-                        print(resp)
-                    except:
-                        print("exception")
-                        continue
+            # Only call the api every 1 second, so wait here for 0.75 seconds, because the
+            # code takes about .15 seconds to run
+            time.sleep(0.75)
 
-                    # This gets the Last Trade object defined in the API Resource
-                    last_trade = resp.last
-                    print(last_trade)
+            # Increment the counters
+            count += 1
+            agg_count += 1
 
-                    # Format the timestamp from the result
-                    dt = self.ts_to_datetime(last_trade["timestamp"])
+            # Loop through each currency pair
+            for currency in currency_pairs:
+                print("here")
+                # Set the input variables to the API
+                from_ = currency[0]
+                to = currency[1]
+                # Call the API with the required parameters
+                
+                response = self.call_API(from_, to, amount=100, precision=2) #client.forex_currencies_real_time_currency_conversion(from_, to, amount=100, precision=2)
+                if not response:
+                    print("exception: response is NONE")
+                    continue
 
-                    # Get the current time and format it
-                    insert_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                # This gets the Last Trade object defined in the API Resource
+                last_trade = response["last"]
 
-                    # Calculate the price by taking the average of the bid and ask prices
-                    avg_price = (last_trade['bid'] + last_trade['ask']) / 2
+                # Format the timestamp from the result
+                dt = self.ts_to_datetime(last_trade["timestamp"])
 
-                    # Write the data to the SQLite database, raw data tables
-                    with engine.begin() as conn:
-                        conn.execute(text(
-                            "INSERT INTO " + from_ + to + "_raw(ticktime, fxrate, inserttime) VALUES (:ticktime, :fxrate, :inserttime)"),
-                                     [{"ticktime": dt, "fxrate": avg_price, "inserttime": insert_time}])
+                # Get the current time and format it
+                insert_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                # Calculate the price by taking the average of the bid and ask prices
+                avg_price = (last_trade['bid'] + last_trade['ask']) / 2
+
+                # Write the data to the SQLite database, raw data tables
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        "INSERT INTO " + from_ + to + "_raw(ticktime, fxrate, inserttime) VALUES (:ticktime, :fxrate, :inserttime)"),
+                                 [{"ticktime": dt, "fxrate": avg_price, "inserttime": insert_time}])

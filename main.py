@@ -54,7 +54,7 @@ currency_pairs = [["AUD", "USD", [], portfolio("AUD", "USD")],
                   ["USD", "PLN", [], portfolio("USD", "PLN")]]
 
 # Main function called and printed
-op = Data_Aggregate(os.getcwd(), 'database')
+op = Data_Aggregate(os.getcwd(), 'database.db')
 
 print("The output from the API call is: ")
 print()
